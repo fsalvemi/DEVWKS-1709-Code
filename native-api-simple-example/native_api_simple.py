@@ -7,6 +7,9 @@ Usage:
     python native_api_simple.py create   # Create infrastructure
     python native_api_simple.py delete   # Delete infrastructure
     python native_api_simple.py status   # Check existing infrastructure
+    
+Configuration:
+    Credentials can be loaded from CC_Env.yml file or hardcoded in the script
 """
 
 import requests
@@ -15,9 +18,62 @@ import json
 import sys
 import argparse
 import urllib3
+import yaml
+import os
+from pathlib import Path
 
 # Disable SSL warnings for demo
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+
+def load_credentials_from_yaml(file_path='CC_Env.yml'):
+    """
+    Load Catalyst Center credentials from YAML file
+    
+    Args:
+        file_path: Path to YAML configuration file (default: CC_Env.yml)
+        
+    Returns:
+        dict: Configuration with keys: base_url, username, password, verify_ssl
+    """
+    # Try to find the YAML file in current directory or script directory
+    script_dir = Path(__file__).parent
+    yaml_paths = [
+        Path(file_path),  # Current directory or absolute path
+        script_dir / file_path,  # Script directory
+    ]
+    
+    for yaml_path in yaml_paths:
+        if yaml_path.exists():
+            try:
+                with open(yaml_path, 'r') as f:
+                    config = yaml.safe_load(f)
+                    
+                    # Validate required fields
+                    required_fields = ['CC_IP', 'CC_USERNAME', 'CC_PASSWORD']
+                    missing = [f for f in required_fields if f not in config]
+                    if missing:
+                        print(f"❌ Missing required fields in {yaml_path}: {', '.join(missing)}")
+                        return None
+                    
+                    # Build configuration
+                    verify_ssl = not config.get('CC_INSECURE', True)
+                    
+                    return {
+                        'base_url': f"https://{config['CC_IP']}",
+                        'username': config['CC_USERNAME'],
+                        'password': config['CC_PASSWORD'],
+                        'verify_ssl': verify_ssl
+                    }
+            except yaml.YAMLError as e:
+                print(f"❌ Error parsing YAML file {yaml_path}: {e}")
+                return None
+            except Exception as e:
+                print(f"❌ Error reading credentials from {yaml_path}: {e}")
+                return None
+    
+    return None
+
 
 class CatalystCenterAPI:
     def __init__(self, base_url: str, username: str, password: str):
@@ -1119,6 +1175,11 @@ Examples:
   python native_api_simple.py create   # Create infrastructure
   python native_api_simple.py delete   # Delete infrastructure
   python native_api_simple.py status   # Check existing infrastructure
+  
+Configuration:
+  Credentials can be provided in two ways:
+  1. YAML file (recommended): Create CC_Env.yml based on CC_Env_Sample.yml
+  2. Hardcoded in script (fallback): Edit the base_url, username, password in this script
         """
     )
     parser.add_argument(
@@ -1126,15 +1187,34 @@ Examples:
         choices=['create', 'delete', 'status'],
         help='Action to perform: create, delete, or check status of infrastructure'
     )
+    parser.add_argument(
+        '--config',
+        default='CC_Env.yml',
+        help='Path to YAML configuration file (default: CC_Env.yml)'
+    )
     
     args = parser.parse_args()
     
-    # Initialize API client
-    cc = CatalystCenterAPI(
-        base_url="https://198.18.129.100",
-        username="admin",
-        password="C1sco12345"
-    )
+    # Try to load credentials from YAML file
+    print("🔍 Loading credentials...")
+    config = load_credentials_from_yaml(args.config)
+    
+    if config:
+        print(f"✅ Loaded credentials from {args.config}")
+        cc = CatalystCenterAPI(
+            base_url=config['base_url'],
+            username=config['username'],
+            password=config['password']
+        )
+    else:
+        print(f"⚠️  Could not load credentials from {args.config}")
+        print("   Using hardcoded credentials (fallback)")
+        # Fallback to hardcoded credentials
+        cc = CatalystCenterAPI(
+            base_url="https://198.18.129.100",
+            username="admin",
+            password="C1sco12345"
+        )
     
     # Authenticate
     print("\n🔐 Authenticating...")

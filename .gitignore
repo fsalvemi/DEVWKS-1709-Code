@@ -63,3 +63,7 @@ Thumbs.db
 # Local data
 local_data/
 
+# Catalyst Center credentials (YAML config files with actual credentials)
+CC_Env.yml
+**/CC_Env.yml
+
