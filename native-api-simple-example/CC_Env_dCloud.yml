@@ -1,0 +1,8 @@
+# Catalyst Center Credentials Configuration
+# This file contains actual credentials - DO NOT commit to version control
+
+CC_IP: 198.18.129.100
+CC_USERNAME: admin
+CC_PASSWORD: C1sco12345
+CC_INSECURE: true  # Set to false to enable SSL certificate verification
+
