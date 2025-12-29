@@ -8,10 +8,10 @@ terraform {
 }
 
 provider "catalystcenter" {
-  username   = var.catalyst_center_username
-  password   = var.catalyst_center_password
-  url        = var.catalyst_center_url
-  ssl_verify = !var.catalyst_center_insecure
+  username = var.catalyst_center_username
+  password = var.catalyst_center_password
+  url      = var.catalyst_center_url
+  insecure = var.catalyst_center_insecure
 }
 
 # ==============================================================================
