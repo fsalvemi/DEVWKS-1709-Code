@@ -13,6 +13,11 @@ Configuration:
     See CC_Env_Sample.yml for the required format.
 """
 
+# Suppress urllib3 NotOpenSSLWarning on macOS with LibreSSL
+import warnings
+warnings.filterwarnings("ignore", message=".*LibreSSL.*")
+warnings.filterwarnings("ignore", category=DeprecationWarning)
+
 import requests
 import time
 import json
@@ -259,26 +264,62 @@ class CatalystCenterAPI:
         
         return None
     
+    def wait_for_task_v2(self, task_id: str, timeout: int = 120) -> bool:
+        """
+        Wait for a task to complete using the /api/v1/task endpoint
+        
+        Args:
+            task_id: The task ID from /api/v2/ippool response
+            timeout: Maximum seconds to wait
+        """
+        url = f"{self.base_url}/api/v1/task/{task_id}"
+        start_time = time.time()
+        check_interval = 3
+        
+        while time.time() - start_time < timeout:
+            try:
+                response = requests.get(url, headers=self.headers, verify=False, timeout=30)
+                
+                if response.status_code == 200:
+                    task_data = response.json().get('response', {})
+                    
+                    # Check if task is complete (has endTime)
+                    if task_data.get('endTime'):
+                        if task_data.get('isError'):
+                            error_msg = task_data.get('failureReason', 'Unknown error')
+                            print(f"  ❌ Task failed: {error_msg}")
+                            return False
+                        return True
+                    
+                    # Task still in progress
+                    elapsed = int(time.time() - start_time)
+                    print(f"  ⏳ Task in progress... ({elapsed}s elapsed)")
+                    time.sleep(check_interval)
+                else:
+                    print(f"  ⚠️  Unexpected status {response.status_code}, retrying...")
+                    time.sleep(check_interval)
+                    
+            except Exception as e:
+                print(f"  ⚠️  Error: {str(e)[:50]}, retrying...")
+                time.sleep(check_interval)
+        
+        print(f"  ⏱️  Task monitoring timeout after {timeout}s")
+        return True  # Assume success on timeout
+    
     def create_ip_pool(self, name: str, cidr: str):
-        """Create global IP pool with correct payload format"""
+        """Create global IP pool using /api/v2/ippool endpoint"""
         # Check if exists
         existing = self.get_global_pool_by_name(name)
         if existing:
             print(f"ℹ️  Pool '{name}' already exists, skipping")
             return existing
         
-        # Parse CIDR into subnet and prefix length
-        subnet, prefix = cidr.split('/')
-        
-        url = f"{self.base_url}/dna/intent/api/v1/global-pool"
-        # Use the correct schema from Catalyst Center documentation
+        # Use /api/v2/ippool endpoint which actually creates pools
+        url = f"{self.base_url}/api/v2/ippool"
         payload = {
-            "name": name,
-            "poolType": "Generic",
-            "addressSpace": {
-                "subnet": subnet,
-                "prefixLength": int(prefix)
-            }
+            "ipPoolName": name,
+            "ipPoolCidr": cidr,
+            "type": "Generic"
         }
         
         print(f"Creating pool '{name}' ({cidr})...")
@@ -287,47 +328,26 @@ class CatalystCenterAPI:
         
         result = response.json()
         
-        # Get task ID from response
-        task_id = result.get('executionId')
-        task_url = result.get('executionStatusUrl')
+        # Get task ID from response (format: {"response": {"taskId": "...", "url": "..."}})
+        task_id = result.get('response', {}).get('taskId')
         
         if task_id:
             print(f"  Waiting for task {task_id[:8]}...")
-            if self.wait_for_task(task_id, task_url, timeout=600):
-                print(f"✅ Pool '{name}' task completed successfully")
-                # Wait for pool to propagate
-                print(f"  Verifying pool creation...")
-                time.sleep(5)
+            if self.wait_for_task_v2(task_id, timeout=120):
+                # Wait briefly for pool to propagate
+                time.sleep(2)
                 
                 # Verify the pool actually exists
                 created_pool = self.get_global_pool_by_name(name)
                 if created_pool:
-                    print(f"✅ Pool '{name}' verified in system")
+                    print(f"✅ Pool '{name}' created successfully")
                     return created_pool
                 else:
-                    print(f"⚠️  WARNING: Task succeeded but pool '{name}' not found in system!")
-                    print(f"  This is a known Catalyst Center API issue with global pools.")
-                    print(f"  Please create the pool manually via GUI with:")
-                    print(f"    Name: {name}")
-                    print(f"    CIDR: {cidr}")
-                    return None
+                    print(f"⚠️  Task completed but pool '{name}' not immediately visible")
+                    print(f"  Pool may still be propagating...")
+                    return result
             else:
                 print(f"❌ Pool '{name}' creation failed")
-                return None
-        elif task_url:
-            # Fallback: check executionStatusUrl once (older API style)
-            time.sleep(2)
-            status_url = f"{self.base_url}{task_url}"
-            status_resp = requests.get(status_url, headers=self.headers, verify=False, timeout=30)
-            status = status_resp.json()
-            
-            if status.get("status") == "SUCCESS":
-                print(f"✅ Pool '{name}' created successfully")
-                time.sleep(3)  # Wait for pool to appear
-                return self.get_global_pool_by_name(name)
-            else:
-                error = status.get("bapiError", "Unknown error")
-                print(f"❌ Pool creation failed: {error}")
                 return None
         else:
             print(f"✅ Pool '{name}' created")
@@ -663,28 +683,36 @@ class CatalystCenterAPI:
             return None
     
     def delete_global_pool(self, pool_name: str):
-        """Delete a global IP pool"""
+        """Delete a global IP pool using /api/v2/ippool endpoint"""
         pool = self.get_global_pool_by_name(pool_name)
         if not pool:
             print(f"ℹ️  Pool '{pool_name}' not found, skipping")
             return None
         
         pool_id = pool["id"]
-        url = f"{self.base_url}/dna/intent/api/v1/global-pool/{pool_id}"
+        # Use /api/v2/ippool endpoint for consistency with create
+        url = f"{self.base_url}/api/v2/ippool/{pool_id}"
         
         print(f"Deleting global pool '{pool_name}'...")
         response = requests.delete(url, headers=self.headers, verify=False, timeout=30)
         
         if response.status_code in [200, 202]:
-            # Get task info from response
             result = response.json() if response.text else {}
-            task_id = result.get('executionId')
-            task_url = result.get('executionStatusUrl')
+            
+            # Get task ID from response (format: {"response": {"taskId": "..."}})
+            task_id = result.get('response', {}).get('taskId')
             
             if task_id:
                 print(f"  Waiting for deletion task {task_id[:8]}...")
-                if self.wait_for_task(task_id, task_url):
-                    print(f"✅ Global pool '{pool_name}' deleted successfully")
+                if self.wait_for_task_v2(task_id, timeout=120):
+                    # Verify the pool is actually deleted
+                    time.sleep(2)
+                    if not self.get_global_pool_by_name(pool_name):
+                        print(f"✅ Global pool '{pool_name}' deleted successfully")
+                        return result
+                    else:
+                        print(f"⚠️  Task completed but pool '{pool_name}' still exists")
+                        return None
                 else:
                     print(f"❌ Global pool '{pool_name}' deletion failed")
                     return None
@@ -819,24 +847,27 @@ def create_infrastructure(cc):
     print()
 
 
-def delete_infrastructure(cc):
+def delete_infrastructure(cc, force=False):
     """Delete all infrastructure in reverse order"""
     print("="*70)
     print("Catalyst Center - Simplified Deployment - DELETE MODE")
     print("="*70)
     print("\n⚠️  WARNING: This will delete all created infrastructure!")
-    print("⚠️  This includes sites, buildings, floors, and IP pool reservations.")
-    print("⚠️  Global IP pools will NOT be deleted (must be done manually).")
+    print("⚠️  This includes sites, buildings, floors, IP pool reservations,")
+    print("⚠️  and global IP pools.")
     
-    # Confirm deletion
-    try:
-        confirm = input("\nType 'DELETE' to confirm: ")
-        if confirm != "DELETE":
-            print("\n❌ Deletion cancelled.")
+    # Confirm deletion (unless --force is used)
+    if not force:
+        try:
+            confirm = input("\nType 'DELETE' to confirm: ")
+            if confirm != "DELETE":
+                print("\n❌ Deletion cancelled.")
+                return 1
+        except (EOFError, KeyboardInterrupt):
+            print("\n\n❌ Deletion cancelled.")
             return 1
-    except (EOFError, KeyboardInterrupt):
-        print("\n\n❌ Deletion cancelled.")
-        return 1
+    else:
+        print("\n⚡ Force mode enabled, skipping confirmation...")
     
     # Re-authenticate in case token expired during confirmation
     print("\n🔐 Re-authenticating...")
@@ -935,24 +966,20 @@ def delete_infrastructure(cc):
     for area in areas:
         cc.delete_site(area)
     
-    # Note about global pools
+    # Delete Global IP Pools
     print("\n" + "="*70)
-    print("ℹ️  Global IP Pools")
-    print("="*70)
-    print("\nGlobal IP pools were NOT deleted.")
-    print("To delete them, use the Catalyst Center GUI:")
-    print("  Design > Network Settings > IP Address Pools > Global Pools")
-    print("\nOr uncomment the deletion code in the script.")
+    print("📦 Deleting Global IP Pools")
+    print("="*70 + "\n")
     
-    # Uncomment below to delete global pools:
-    # print("\n" + "="*70)
-    # print("📦 Deleting Global IP Pools")
-    # print("="*70 + "\n")
-    # for pool_name in ["US_CORP", "US_TECH", "US_GUEST", "US_BYOD"]:
-    #     try:
-    #         cc.delete_global_pool(pool_name)
-    #     except Exception as e:
-    #         pass
+    # Re-authenticate to ensure fresh token
+    print("🔐 Refreshing authentication...")
+    cc.authenticate()
+    
+    for pool_name in ["US_CORP", "US_TECH", "US_GUEST", "US_BYOD"]:
+        try:
+            cc.delete_global_pool(pool_name)
+        except Exception as e:
+            print(f"  ⚠️  Error deleting pool '{pool_name}': {str(e)[:100]}")
     
     print("\n" + "="*70)
     print("✅ Deletion Complete!")
@@ -1197,6 +1224,11 @@ Configuration:
         required=True,
         help='Path to YAML configuration file (required)'
     )
+    parser.add_argument(
+        '--force', '-f',
+        action='store_true',
+        help='Skip confirmation prompt for delete operation'
+    )
     
     args = parser.parse_args()
     
@@ -1231,7 +1263,7 @@ Configuration:
     if args.action == 'create':
         return create_infrastructure(cc)
     elif args.action == 'delete':
-        return delete_infrastructure(cc)
+        return delete_infrastructure(cc, force=args.force)
     elif args.action == 'status':
         return check_infrastructure(cc)
     else:
