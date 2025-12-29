@@ -1,0 +1,84 @@
+---
+catalyst_center:
+  network_settings:
+    ip_pools:
+      - name: US_CORP
+        ip_address_space: IPv4
+        ip_pool_cidr: 10.201.0.0/16
+        dhcp_servers:
+          - 10.201.0.1
+        dns_servers:
+          - 10.201.0.1
+        ip_pools_reservations:
+          - name: DOT_CORP
+            prefix_length: 24
+            subnet: 10.201.1.0
+          - name: ST_CORP
+            prefix_length: 24
+            subnet: 10.201.2.0
+          - name: WCP_CORP
+            prefix_length: 24
+            subnet: 10.201.3.0
+          - name: ADM_CORP
+            prefix_length: 24
+            subnet: 10.201.4.0
+      - name: US_TECH
+        ip_address_space: IPv4
+        ip_pool_cidr: 10.202.0.0/16
+        dhcp_servers:
+          - 10.202.0.1
+        dns_servers:
+          - 10.202.0.1
+        ip_pools_reservations:
+          - name: DOT_TECH
+            prefix_length: 24
+            subnet: 10.202.1.0
+          - name: ST_TECH
+            prefix_length: 24
+            subnet: 10.202.2.0
+          - name: WCP_TECH
+            prefix_length: 24
+            subnet: 10.202.3.0
+          - name: ADM_TECH
+            prefix_length: 24
+            subnet: 10.202.4.0
+      - name: US_GUEST
+        ip_address_space: IPv4
+        ip_pool_cidr: 10.203.0.0/16
+        dhcp_servers:
+          - 10.203.0.1
+        dns_servers:
+          - 10.203.0.1
+        ip_pools_reservations:
+          - name: DOT_GUEST
+            prefix_length: 24
+            subnet: 10.203.1.0
+          - name: ST_GUEST
+            prefix_length: 24
+            subnet: 10.203.2.0
+          - name: WCP_GUEST
+            prefix_length: 24
+            subnet: 10.203.3.0
+          - name: ADM_GUEST
+            prefix_length: 24
+            subnet: 10.203.4.0
+      - name: US_BYOD
+        ip_address_space: IPv4
+        ip_pool_cidr: 10.204.0.0/16
+        dhcp_servers:
+          - 10.204.0.1
+        dns_servers:
+          - 10.204.0.1
+        ip_pools_reservations:
+          - name: DOT_BYOD
+            prefix_length: 24
+            subnet: 10.204.1.0
+          - name: ST_BYOD
+            prefix_length: 24
+            subnet: 10.204.2.0
+          - name: WCP_BYOD
+            prefix_length: 24
+            subnet: 10.204.3.0
+          - name: ADM_BYOD
+            prefix_length: 24
+            subnet: 10.204.4.0
