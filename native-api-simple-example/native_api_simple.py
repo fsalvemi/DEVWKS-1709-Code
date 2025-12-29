@@ -4,12 +4,13 @@ Simplified Catalyst Center Native API Implementation
 Creates sites and global IP pools
 
 Usage:
-    python native_api_simple.py create   # Create infrastructure
-    python native_api_simple.py delete   # Delete infrastructure
-    python native_api_simple.py status   # Check existing infrastructure
+    python native_api_simple.py create --config CC_Env.yml
+    python native_api_simple.py delete --config CC_Env.yml
+    python native_api_simple.py status --config CC_Env.yml
     
 Configuration:
-    Credentials can be loaded from CC_Env.yml file or hardcoded in the script
+    A YAML configuration file is REQUIRED containing Catalyst Center credentials.
+    See CC_Env_Sample.yml for the required format.
 """
 
 import requests
@@ -1172,14 +1173,18 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  python native_api_simple.py create   # Create infrastructure
-  python native_api_simple.py delete   # Delete infrastructure
-  python native_api_simple.py status   # Check existing infrastructure
+  python native_api_simple.py create --config CC_Env.yml
+  python native_api_simple.py delete --config CC_Env_CX_Lab_CC1.yml
+  python native_api_simple.py status --config CC_Env_CX_Lab_CC3.yml
   
 Configuration:
-  Credentials can be provided in two ways:
-  1. YAML file (recommended): Create CC_Env.yml based on CC_Env_Sample.yml
-  2. Hardcoded in script (fallback): Edit the base_url, username, password in this script
+  A YAML configuration file is REQUIRED and must contain:
+    CC_IP: IP address or hostname of Catalyst Center
+    CC_USERNAME: Username for authentication
+    CC_PASSWORD: Password for authentication
+    CC_INSECURE: true/false (SSL certificate verification)
+  
+  See CC_Env_Sample.yml for a template.
         """
     )
     parser.add_argument(
@@ -1189,32 +1194,30 @@ Configuration:
     )
     parser.add_argument(
         '--config',
-        default='CC_Env.yml',
-        help='Path to YAML configuration file (default: CC_Env.yml)'
+        required=True,
+        help='Path to YAML configuration file (required)'
     )
     
     args = parser.parse_args()
     
-    # Try to load credentials from YAML file
+    # Load credentials from YAML file
     print("🔍 Loading credentials...")
     config = load_credentials_from_yaml(args.config)
     
-    if config:
-        print(f"✅ Loaded credentials from {args.config}")
-        cc = CatalystCenterAPI(
-            base_url=config['base_url'],
-            username=config['username'],
-            password=config['password']
-        )
-    else:
-        print(f"⚠️  Could not load credentials from {args.config}")
-        print("   Using hardcoded credentials (fallback)")
-        # Fallback to hardcoded credentials
-        cc = CatalystCenterAPI(
-            base_url="https://198.18.129.100",
-            username="admin",
-            password="C1sco12345"
-        )
+    if not config:
+        print(f"❌ Failed to load credentials from {args.config}")
+        print(f"   Please ensure the file exists and has the correct format.")
+        print(f"   See CC_Env_Sample.yml for reference.")
+        return 1
+    
+    print(f"✅ Loaded credentials from {args.config}")
+    
+    # Initialize API client
+    cc = CatalystCenterAPI(
+        base_url=config['base_url'],
+        username=config['username'],
+        password=config['password']
+    )
     
     # Authenticate
     print("\n🔐 Authenticating...")

@@ -18,28 +18,30 @@ CC_INSECURE: true  # Set to false to enable SSL certificate verification
 
 ## Usage
 
-### Default Configuration File
+### Configuration File is Required
 
-By default, the script looks for `CC_Env.yml` in the current directory or the script directory:
-
-```bash
-python native_api_simple.py create
-python native_api_simple.py delete  
-python native_api_simple.py status
-```
-
-### Custom Configuration File
-
-You can specify a different configuration file using the `--config` option:
+The `--config` option is **required** for all operations. You must specify a YAML configuration file:
 
 ```bash
+python native_api_simple.py create --config CC_Env.yml
+python native_api_simple.py delete --config CC_Env_CX_Lab_CC1.yml
 python native_api_simple.py status --config CC_Env_CX_Lab_CC3.yml
-python native_api_simple.py create --config my_lab_config.yml
 ```
 
-### Fallback to Hardcoded Credentials
+### Multiple Environment Support
 
-If no YAML file is found, the script falls back to hardcoded credentials (for backward compatibility).
+You can easily switch between different Catalyst Center environments by specifying different configuration files:
+
+```bash
+# Production environment
+python native_api_simple.py status --config CC_Env_Production.yml
+
+# Lab environment
+python native_api_simple.py create --config CC_Env_CX_Lab_CC1.yml
+
+# Development environment
+python native_api_simple.py status --config CC_Env_Dev.yml
+```
 
 ## Security Best Practices
 
@@ -70,9 +72,10 @@ pip install -r requirements.txt
 
 ## Benefits
 
-- ✅ Separate credentials from code
-- ✅ Easy to switch between multiple environments
-- ✅ Better security (credentials not in source code)
-- ✅ Simpler configuration management
-- ✅ Still supports hardcoded fallback for simple use cases
+- ✅ **Mandatory configuration** - No hardcoded credentials in source code
+- ✅ **Enhanced security** - Credentials always in external files
+- ✅ **Easy environment switching** - Just change the --config parameter
+- ✅ **Clear error messages** - Script fails fast if config is missing
+- ✅ **No accidental credential commits** - Config files are gitignored
+- ✅ **Multiple environment support** - Lab, Dev, Prod configurations
 
