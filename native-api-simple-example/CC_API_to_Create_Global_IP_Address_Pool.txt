@@ -1,0 +1,38 @@
+from random import sample
+
+
+Create a global IP address pool.
+
+Schema
+
+root (map, optional)
+  addressSpace (map, required)
+  subnet (string, required): The IP address component of the CIDR notation for this subnet.
+  prefixLength (number, required): The network mask component, as a decimal, for the CIDR notation of this subnet.
+  gatewayIpAddress (string, optional): The gateway IP address for this subnet.
+  dhcpServers (array<string>, optional): The DHCP server(s) for this subnet.
+  dnsServers (array<string>, optional): The DNS server(s) for this subnet.
+name  (string, required): The name for this reserve IP pool. Only letters, numbers, '-' (hyphen), '_' (underscore), '.' (period), and '/' (forward slash) are allowed.
+poolType
+
+Sample
+
+{
+    "addressSpace": {
+        "subnet": "string",
+        "prefixLength": "number",
+        "gatewayIpAddress": "string",
+        "dhcpServers": [
+            "string"
+        ],
+        "dnsServers": [
+            "string"
+        ]
+    },
+    "name": "string",
+    "poolType": "string"
+}
+
+Full Documentation:
+https://developer.cisco.com/docs/dna-center/2-3-7-9/create-global-pool/
+
