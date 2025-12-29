@@ -17,22 +17,19 @@ This is a **fully working** implementation that deploys the same network infrast
 
 ## 🚀 Quick Start
 
-### 1. Configure Credentials
+### 1. Credentials (Pre-configured for Lab)
 
-Copy the example configuration file and update with your Catalyst Center credentials:
-
-```bash
-cp terraform.tfvars.example terraform.tfvars
-```
-
-Edit `terraform.tfvars` with your environment details:
+The `terraform.tfvars` file is **already configured** for the lab environment - no changes required!
 
 ```hcl
-catalyst_center_url      = "https://10.x.x.x"
+# terraform.tfvars (pre-configured)
+catalyst_center_url      = "https://198.18.129.100"
 catalyst_center_username = "admin"
-catalyst_center_password = "your_password"
+catalyst_center_password = "C1sco12345"
 catalyst_center_insecure = true
 ```
+
+> **Note:** This file externalizes the Catalyst Center credentials as Terraform variables, keeping the main configuration (`main.tf`) clean and reusable. For different environments, simply update this file with your target Catalyst Center details.
 
 ### 2. Initialize and Deploy
 
@@ -47,6 +44,15 @@ terraform apply   # Deploy to Catalyst Center
 ```bash
 terraform destroy  # Remove all created resources
 ```
+
+## 📁 Configuration Files
+
+| File | Purpose |
+|------|---------|
+| `main.tf` | Infrastructure resources (sites, pools, reservations) |
+| `variables.tf` | Variable definitions with descriptions and defaults |
+| `terraform.tfvars` | **Lab credentials** - pre-configured, no changes needed |
+| `terraform.tfvars.example` | Template for other environments |
 
 ## ⚠️ Security Note for Production
 
