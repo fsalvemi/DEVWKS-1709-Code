@@ -194,8 +194,8 @@ terraform apply
 Your files should now match the reference configuration:
 
 ```bash
-diff data/sites.nac.yaml reference_configs/final_config/sites.nac.yaml
-diff data/ip_pools.nac.yaml reference_configs/final_config/ip_pools.nac.yaml
+diff -c data/sites.nac.yaml reference_configs/final_config/sites.nac.yaml
+diff -c data/ip_pools.nac.yaml reference_configs/final_config/ip_pools.nac.yaml
 ```
 
 If there are no differences, you've successfully completed the exercise!
