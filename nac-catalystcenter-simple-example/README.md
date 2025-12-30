@@ -22,6 +22,8 @@ Deploys a complete network infrastructure to Catalyst Center:
 ```
 nac-catalystcenter-simple-example/
 ├── main.tf                    # Terraform configuration using NAC module
+├── CC_Env_dCloud.sh           # Environment variables for dCloud lab (pre-configured)
+├── CC_Env_Sample.sh           # Template for your own environment
 ├── data/
 │   ├── sites.nac.yaml        # Site hierarchy (areas, buildings, floors)
 │   └── ip_pools.nac.yaml     # IP pools and reservations
@@ -35,6 +37,55 @@ nac-catalystcenter-simple-example/
 ```
 
 **Note**: The `reference_configs` folder is provided for learning and validation purposes. It contains both the initial configuration (US sites only) and the final configuration (with Rome office added) that you'll work towards during the lab exercises.
+
+## 🔐 Environment Configuration Files
+
+The Catalyst Center Terraform provider reads credentials from environment variables. This project includes shell scripts to configure these variables:
+
+| File | Purpose |
+|------|---------|
+| `CC_Env_dCloud.sh` | **Lab-ready** - Pre-configured for dCloud environment (198.18.129.100) |
+| `CC_Env_Sample.sh` | **Template** - Copy and customize for your own Catalyst Center |
+
+### What These Files Do
+
+When you `source` a CC_Env file, it exports four environment variables that the Catalyst Center Terraform provider reads automatically:
+
+```bash
+export CC_URL="https://198.18.129.100"    # Catalyst Center URL
+export CC_USERNAME="admin"                 # Authentication username
+export CC_PASSWORD="C1sco12345"            # Authentication password
+export CC_INSECURE="true"                  # Skip SSL certificate verification
+```
+
+### How to Use
+
+**For dCloud Lab** (no changes needed):
+```bash
+source CC_Env_dCloud.sh
+terraform plan
+terraform apply
+```
+
+**For Your Own Environment**:
+```bash
+# Create your own configuration
+cp CC_Env_Sample.sh CC_Env.sh
+
+# Edit with your credentials
+nano CC_Env.sh
+
+# Source and run
+source CC_Env.sh
+terraform plan
+```
+
+### Security Note
+
+⚠️ **Never commit real credentials to version control!** The `CC_Env_dCloud.sh` file contains lab credentials that are safe to share. For production environments:
+- Add `CC_Env.sh` to `.gitignore`
+- Use secrets management tools (HashiCorp Vault, AWS Secrets Manager, etc.)
+- Consider using Terraform Cloud with variable sets
 
 ## 🚀 Quick Start
 
