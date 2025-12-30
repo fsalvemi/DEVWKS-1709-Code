@@ -251,6 +251,6 @@ Review the full comparison in the repository root:
 
 This folder contains a **fully working implementation** using Catalyst Center Terraform provider v0.4.5 that demonstrates real-world complexity. While it successfully deploys all 35 resources, it required significant debugging, deep schema knowledge, and a complete rewrite when upgrading from provider v0.3.3. The NAC module approach achieves the same result with 3x less code, human-readable names, and automatic dependency management.
 
-## 📚 Learning Path
+## Suggested Learning Path
 
-**[← Back to Main README](README.md)** to continue your learning
+Follow the [Lab Guide](https://fsalvemi.github.io/DEVWKS-1709-Lab-Guide/)
