@@ -1,7 +1,0 @@
-# Catalyst Center Credentials Configuration
-# Copy this file to CC_Env.yml and update with your actual credentials
-
-CC_IP: 10.48.86.136
-CC_USERNAME: admin
-CC_PASSWORD: cisco!123
-CC_INSECURE: true
