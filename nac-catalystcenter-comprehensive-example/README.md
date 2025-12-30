@@ -133,8 +133,9 @@ Type `yes` when prompted to confirm.
    - Check Virtual Networks (Campus, Guest, Printers, BYOD)
 
 4. **Devices**: Navigate to **Provision > Inventory**
-   - Verify BR10 is Border/Control Plane
-   - Verify EDGE01, EDGE02 are Edge Nodes
+   - At this stage, devices are still in `INIT` state
+   - Devices are **not yet assigned to a site or provisioned** - this is expected
+   - We will provision devices in the next exercise
 
 ---
 
