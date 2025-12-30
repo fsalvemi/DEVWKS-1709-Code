@@ -13,7 +13,7 @@ This is a **fully working** implementation that deploys the same network infrast
 
 **Total Resources Created**: 35
 
-**Lines of Code**: ~487 (vs ~164 for NAC module)
+**Lines of Code**: ~464 
 
 ## 🚀 Quick Start
 
@@ -69,8 +69,8 @@ This lab example includes `terraform.tfvars` for convenience. In production envi
 While this implementation works, it demonstrates several challenges:
 
 ### 1. **You need to discover how API objects are mapped to TF Attribute Names**
-- Provider expects: `ip_subnet` (with CIDR like `10.201.0.0/16`)
-- API/Documentation uses: `ip_pool_cidr`
+- Provider expects: `address_space_subnet` + `address_space_prefix_length` (separate fields)
+- API/Documentation uses: `ip_pool_cidr` (combined CIDR notation)
 - Reality: You must memorize exact provider schema differences
 
 ### 2. **You need to discover and configure Required Attributes**
@@ -79,6 +79,7 @@ For `catalystcenter_floor`, you must provide non-obvious attributes:
 - `width` - Floor width in feet/meters
 - `height` - Floor height
 - `length` - Floor length
+- `units_of_measure` - Must specify "feet" or "meters"
 
 These aren't intuitive without extensive documentation review.
 
@@ -95,8 +96,8 @@ terraform providers schema -json | jq '.provider_schemas."registry.terraform.io/
 
 Then manually match each attribute to the correct name and type.
 
-### 5. **Manual Dependency Management**
-Every resource requires explicit `depends_on` declarations (25+ in this example) to ensure proper creation order.
+### 5. **ID-Based References Required**
+Resources require `parent_id` instead of human-readable `parent_name`. You must use resource references (e.g., `parent_id = catalystcenter_area.united_states.id`) or data sources to look up IDs, adding complexity compared to simple name-based references.
 
 ## 📝 Adding a New Site - Complexity Comparison
 
@@ -129,60 +130,59 @@ floors:
 ### **Native Terraform Approach** - Add to `main.tf`:
 
 ```hcl
-# 1. Create the building
+# 1. Create the building (requires parent_id, not parent_name)
 resource "catalystcenter_building" "new_tech_hub" {
-  name        = "New Tech Hub"
-  parent_name = "Global/United States/Golden Hills Campus"
-  address     = "123 Market St, San Francisco, CA 94103"
-  latitude    = 37.774
-  longitude   = -122.419
-  country     = "United States"
-  depends_on  = [catalystcenter_area.golden_hills_campus]
+  name      = "New Tech Hub"
+  parent_id = catalystcenter_area.golden_hills_campus.id  # Must use ID reference
+  address   = "123 Market St, San Francisco, CA 94103"
+  latitude  = 37.774
+  longitude = -122.419
+  country   = "United States"
 }
 
 # 2. Create the floor with all required attributes
 resource "catalystcenter_floor" "new_tech_hub_floor_1" {
-  name         = "Floor 1"
-  parent_name  = "Global/United States/Golden Hills Campus/New Tech Hub"
-  floor_number = 1
-  rf_model     = "Cubes And Walled Offices"  # Required but not obvious
-  width        = 100.0                        # Required but not obvious
-  height       = 10.0                         # Required but not obvious
-  length       = 100.0                        # Required but not obvious
-  depends_on   = [catalystcenter_building.new_tech_hub]
+  name             = "Floor 1"
+  parent_id        = catalystcenter_building.new_tech_hub.id  # Must use ID reference
+  floor_number     = 1
+  rf_model         = "Cubes And Walled Offices"  # Required but not obvious
+  width            = 100                          # Required but not obvious
+  height           = 10                           # Required but not obvious
+  length           = 100                          # Required but not obvious
+  units_of_measure = "feet"                       # Required in 0.4.5
 }
 
-# 3. Create IP pool reservation
-resource "catalystcenter_reserve_ip_subpool" "nth_corp" {
-  site_id            = catalystcenter_building.new_tech_hub.id
-  name               = "NTH_CORP"
-  type               = "Generic"
-  ipv6_address_space = false
-  ipv4_global_pool   = "10.201.0.0/16"
-  ipv4_prefix        = true
-  ipv4_prefix_length = 24
-  ipv4_subnet        = "10.201.5.0"
-  depends_on         = [catalystcenter_ip_pool.us_corp]
+# 3. Create IP pool reservation (requires pool ID, not CIDR string)
+resource "catalystcenter_ip_pool_reservation" "nth_corp" {
+  site_id             = catalystcenter_building.new_tech_hub.id
+  name                = "NTH_CORP"
+  pool_type           = "Generic"
+  ipv4_global_pool_id = catalystcenter_ip_pool.us_corp.id  # Must use pool ID
+  ipv4_prefix_length  = 24
+  ipv4_subnet         = "10.201.5.0"
+  ipv4_dhcp_servers   = ["10.201.0.2"]
+  ipv4_dns_servers    = ["10.201.0.2"]
+  ipv4_gateway        = "10.201.5.1"
 }
 ```
 
-**Lines Added**: 34 lines of HCL
-**Dependencies**: 3 manual `depends_on` declarations
-**IP Pool**: Must know exact attribute names (`ipv4_global_pool`, `ipv4_subnet`, etc.)
-**Schema Knowledge**: Critical - must know `rf_model`, dimensions, and exact IP pool attributes
+**Lines Added**: 35 lines of HCL
+**ID References**: Must use resource IDs instead of human-readable names
+**IP Pool**: Must know exact attribute names (`ipv4_global_pool_id`, `ipv4_subnet`, etc.)
+**Schema Knowledge**: Critical - must know `rf_model`, dimensions, `units_of_measure`, and exact IP pool attributes
 
 ### **Summary**:
-- **NAC**: 12 lines, intuitive, no dependencies to manage
-- **Native Terraform**: 34 lines (3x more), requires schema knowledge, manual dependency tracking
+- **NAC**: 12 lines, intuitive, uses human-readable names
+- **Native Terraform**: 35 lines (3x more), requires schema knowledge, ID-based references
 
 ## 🔍 Real-World Development Experience
 
-This implementation required **5 debugging iterations** to fix:
-1. Missing CIDR notation on `ip_subnet` (needed `/16`)
-2. Gateway and DHCP server IP conflicts
-3. Missing floor attributes (`rf_model`, `width`, `height`, `length`)
-4. Case sensitivity issues (`Generic` vs `generic`)
-5. Missing `ipv4_global_pool` on reservations
+This implementation required **multiple debugging iterations** to fix:
+1. Schema changes between provider versions (0.3.3 → 0.4.5 required complete rewrite)
+2. `parent_name` replaced with `parent_id` requiring ID lookups/references
+3. `ip_subnet` split into `address_space_subnet` + `address_space_prefix_length`
+4. Missing floor attribute `units_of_measure` (new requirement in 0.4.5)
+5. `ipv4_global_pool` (CIDR string) replaced with `ipv4_global_pool_id` (UUID reference)
 
 **Development Time**: 30-45 minutes for someone familiar with the provider
 **NAC Module Time**: 5 minutes - worked on first try
@@ -199,27 +199,26 @@ buildings:
     parent_name: Global/United States/Golden Hills Campus
 ```
 
-**Native Terraform (HCL)** - Verbose, imperative:
+**Native Terraform (HCL)** - Verbose, ID-based references:
 ```hcl
 resource "catalystcenter_building" "sunset_tower" {
-  name        = "Sunset Tower"
-  parent_name = "Global/United States/Golden Hills Campus"
-  address     = "8358 Sunset Blvd, Los Angeles, CA 90069"
-  latitude    = 34.099
-  longitude   = -118.366
-  country     = "United States"
-  depends_on  = [catalystcenter_area.golden_hills_campus]
+  name      = "Sunset Tower"
+  parent_id = catalystcenter_area.golden_hills_campus.id  # ID reference required
+  address   = "8358 Sunset Blvd, Los Angeles, CA 90069"
+  latitude  = 34.099
+  longitude = -118.366
+  country   = "United States"
 }
 
 resource "catalystcenter_floor" "sunset_tower_floor_1" {
-  name         = "FLOOR_1"
-  parent_name  = "Global/United States/Golden Hills Campus/Sunset Tower"
-  floor_number = 1
-  rf_model     = "Cubes And Walled Offices"  # Required, not obvious
-  width        = 100                          # Required, not obvious
-  height       = 10                           # Required, not obvious
-  length       = 100                          # Required, not obvious
-  depends_on   = [catalystcenter_building.sunset_tower]
+  name             = "FLOOR_1"
+  parent_id        = catalystcenter_building.sunset_tower.id  # ID reference required
+  floor_number     = 1
+  rf_model         = "Cubes And Walled Offices"  # Required, not obvious
+  width            = 100                          # Required, not obvious
+  height           = 10                           # Required, not obvious
+  length           = 100                          # Required, not obvious
+  units_of_measure = "feet"                       # Required in 0.4.5
 }
 ```
 
@@ -227,11 +226,11 @@ resource "catalystcenter_floor" "sunset_tower_floor_1" {
 
 This working example demonstrates why native implementations are challenging:
 
-1. **More verbose** - 3x more code (487 vs 164 lines)
+1. **More verbose** - 3x more code (464 vs 164 lines)
 2. **Requires deep knowledge** - Must know exact provider schema
-3. **Error-prone** - Took 5 iterations to get working
+3. **Breaking changes** - Provider version upgrades may require complete rewrites
 4. **Maintenance burden** - Schema changes require code updates
-5. **Manual dependencies** - 25+ explicit `depends_on` declarations
+5. **ID-based references** - Must use resource IDs instead of human-readable names
 6. **No guardrails** - Errors only discovered at runtime
 
 ## 🔗 For Comparison
@@ -250,7 +249,7 @@ Review the full comparison in the repository root:
 
 ## Conclusion
 
-This folder contains a **fully working implementation** that demonstrates real-world complexity. While it successfully deploys all 35 resources, it required significant debugging and deep schema knowledge. The NAC module approach achieves the same result with 3x less code, automatic dependency management, and worked on the first try.
+This folder contains a **fully working implementation** using Catalyst Center Terraform provider v0.4.5 that demonstrates real-world complexity. While it successfully deploys all 35 resources, it required significant debugging, deep schema knowledge, and a complete rewrite when upgrading from provider v0.3.3. The NAC module approach achieves the same result with 3x less code, human-readable names, and automatic dependency management.
 
 ## 📚 Learning Path
 
