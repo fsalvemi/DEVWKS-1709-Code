@@ -262,9 +262,9 @@ Deploy an entire SD-Access fabric from YAML configuration files.
 Define the desired state - the module handles the complex API orchestration.
 
 ### 3. **Bulk API Support**
-Uses `use_bulk_api = true` for optimized deployment performance. Instead of making individual API calls for each resource, the bulk API batches multiple operations into a single request, significantly reducing deployment time for large configurations.
+The NAC module supports an input variable `use_bulk_api = true` in `main.tf`, which instructs the module to use Catalyst Center's bulk API endpoints. Instead of making individual API calls for each resource, the bulk API batches multiple operations into a single request, significantly reducing deployment time for large configurations.
 
-> **Learn More**: [NAC Module Variables](https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter#inputs) | [Catalyst Center Bulk APIs](https://developer.cisco.com/docs/dna-center/)
+> **Learn More**: [NAC Module Variables](https://github.com/netascode/terraform-catalystcenter-nac-catalystcenter#inputs)
 
 ### 4. **Template Integration**
 Supports Jinja2 templates for Day-N device configurations.
