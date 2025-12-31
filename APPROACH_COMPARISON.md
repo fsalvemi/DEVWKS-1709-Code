@@ -26,7 +26,7 @@ The NAC Module approach requires **7x less code** than Native API and **2.4x les
 | **Full Destroy** | ✅ `terraform destroy` | ✅ `terraform destroy` | ⚠️ Manual (delete script) |
 | **Partial Rollback** | ✅ Edit YAML + apply | ✅ Edit HCL + apply | ❌ Complex (manual API calls) |
 | **Human-Readable Config** | ✅ YAML files | ⚠️ HCL syntax | ⚠️ Code-based |
-| **Schema Validation** | ✅ JSON Schema + IntelliSense | ⚠️ `terraform validate` | ❌ Runtime errors only |
+| **Schema Validation** | ✅ `nac-validate` + JSON Schema + IntelliSense | ⚠️ `terraform validate` (syntax only) | ❌ Runtime errors only |
 | **Dependency Management** | ✅ Automatic | ⚠️ ID-based references | ❌ Manual ordering |
 | **Change Preview** | ✅ `terraform plan` | ✅ `terraform plan` | ❌ No |
 
@@ -96,7 +96,59 @@ The NAC Module approach requires **7x less code** than Native API and **2.4x les
 - **Native Terraform**: Delete the `catalystcenter_floor` resource block, update any references, run `terraform apply`
 - **Native API**: Find the floor ID via API, call DELETE endpoint, verify no dependent resources exist
 
-### 7. Error Handling & Debugging
+### 7. Schema Validation
+
+Schema validation helps catch configuration errors **before deployment**. The three approaches offer very different levels of validation:
+
+| Approach | Validation Tool | When Errors Are Caught | Validation Scope |
+|----------|-----------------|----------------------|------------------|
+| **NAC Module** | `nac-validate` + JSON Schema + IntelliSense | While editing (IDE) + pre-commit + pre-apply | Syntactic + Semantic |
+| **Native Terraform** | `terraform validate` | Before apply | Syntactic only |
+| **Native API** | None | Runtime (after API call fails) | None |
+
+#### NAC Module: Multi-Layer Validation
+
+The NAC Module provides the most comprehensive validation through multiple tools:
+
+1. **IntelliSense in VS Code**: Files with `.nac.yaml` suffix get real-time validation and auto-completion as you type. The JSON Schema checks attribute names, types, and required fields immediately.
+
+2. **nac-validate CLI**: A dedicated tool for syntactic and semantic validation of YAML files. It validates against a Yamale schema and can run custom Python rules for business logic validation.
+
+```bash
+nac-validate data/
+```
+
+3. **Pre-commit Integration**: Can be added as a git pre-commit hook to prevent invalid configurations from being committed.
+
+> **Learn More**: [nac-validate Documentation](https://netascode.cisco.com/docs/tools/nac-validate/overview/)
+
+#### Native Terraform: Basic Syntax Validation
+
+`terraform validate` checks HCL syntax and provider schema compliance:
+
+```bash
+terraform validate
+```
+
+**What it catches:**
+- Missing required arguments
+- Unknown attribute names
+- Type mismatches (string vs number)
+- Invalid resource references
+
+**What it misses:**
+- Business logic errors (invalid IP ranges, duplicate names)
+- API-specific constraints
+- Cross-resource semantic validation
+
+#### Native API: No Pre-Deployment Validation
+
+With the Native API approach, errors are only discovered at runtime when the API call fails. This leads to:
+- Trial-and-error debugging cycles
+- Cryptic API error messages
+- Partial deployments when errors occur mid-script
+
+### 8. Error Handling & Debugging
 
 | Approach | Error Discovery | Debugging Experience |
 |----------|-----------------|---------------------|
@@ -144,6 +196,7 @@ The NAC Module approach requires **7x less code** than Native API and **2.4x les
 ## 🔗 Resources
 
 - **NAC Module**: [terraform-catalystcenter-nac-catalystcenter](https://registry.terraform.io/modules/netascode/nac-catalystcenter/catalystcenter/latest)
+- **nac-validate Tool**: [netascode.cisco.com/docs/tools/nac-validate](https://netascode.cisco.com/docs/tools/nac-validate/overview/)
 - **Catalyst Center Provider**: [CiscoDevNet/catalystcenter](https://registry.terraform.io/providers/CiscoDevNet/catalystcenter/latest)
 - **Catalyst Center API Docs**: [developer.cisco.com](https://developer.cisco.com/docs/dna-center/)
 - **Network-as-Code Documentation**: [netascode.cisco.com](https://netascode.cisco.com/)
