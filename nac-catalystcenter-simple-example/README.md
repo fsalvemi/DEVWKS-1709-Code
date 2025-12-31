@@ -51,10 +51,13 @@ export CC_INSECURE="true"
 
 ### 1. Configure Environment
 
+Navigate to the example directory:
 ```bash
 cd nac-catalystcenter-simple-example
+```
 
-# Source the environment file (pre-configured for lab)
+Source the environment file (pre-configured for lab):
+```bash
 source CC_Env_dCloud.sh
 ```
 
@@ -172,10 +175,13 @@ Edit `data/ip_pools.nac.yaml` and add the following at the end of the `ip_pools`
 
 ### 11. Deploy the Changes
 
-Review and apply the new configuration:
-
+Review the new configuration:
 ```bash
 terraform plan
+```
+
+Apply the changes:
+```bash
 terraform apply
 ```
 
@@ -195,6 +201,9 @@ Your files should now match the reference configuration:
 
 ```bash
 diff -c data/sites.nac.yaml reference_configs/final_config/sites.nac.yaml
+```
+
+```bash
 diff -c data/ip_pools.nac.yaml reference_configs/final_config/ip_pools.nac.yaml
 ```
 

@@ -47,16 +47,23 @@ CC_INSECURE: true
 
 ### 1. Set Up Python Environment
 
+Navigate to the example directory:
 ```bash
 cd native-api-simple-example
+```
 
-# Create virtual environment (if not already created)
+Create virtual environment (if not already created):
+```bash
 python3 -m venv venv
+```
 
-# Activate virtual environment
+Activate virtual environment:
+```bash
 source venv/bin/activate
+```
 
-# Install dependencies
+Install dependencies:
+```bash
 pip install -r requirements.txt
 ```
 

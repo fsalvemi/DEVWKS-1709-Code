@@ -33,10 +33,19 @@ catalyst_center_insecure = true
 
 ### 2. Initialize and Deploy
 
+Download the provider:
 ```bash
-terraform init    # Download provider
-terraform plan    # Review changes
-terraform apply   # Deploy to Catalyst Center
+terraform init
+```
+
+Review changes:
+```bash
+terraform plan
+```
+
+Deploy to Catalyst Center:
+```bash
+terraform apply
 ```
 
 ### 3. Destroy (Cleanup)

@@ -70,10 +70,13 @@ export CC_INSECURE="true"
 
 ### 1. Configure Environment
 
+Navigate to the example directory:
 ```bash
 cd nac-catalystcenter-comprehensive-example
+```
 
-# Source the environment file (pre-configured for lab)
+Source the environment file (pre-configured for lab):
+```bash
 source CC_Env_dCloud.sh
 ```
 
