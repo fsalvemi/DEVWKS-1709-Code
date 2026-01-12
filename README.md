@@ -1,9 +1,3 @@
-# DEVWKS-1709: Catalyst Center API Automation
-
-Repository for DEVWKS-1709 workshop code and examples demonstrating infrastructure automation with Cisco Catalyst Center APIs.
-
----
-
 # DEVWKS-1709 Lab
 
 This is a demonstration repository for **DEVWKS-1709 Lab** and includes four repositories that cover two scenarios and three learning objectives
